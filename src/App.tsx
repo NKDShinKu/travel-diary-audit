@@ -1,10 +1,19 @@
-
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from '@/components/layout.tsx';
+import TravelNoteList from '@/pages/travel-list/index.tsx';
+import LoginPage from '@/pages/login/index.tsx';
 
 function App() {
   return (
-      <div>
-        <h1>Welcome to React + TypeScript + Vite</h1>
-      </div>
+      <BrowserRouter>
+          <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={<Layout />}>
+                  <Route index element={<TravelNoteList />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+      </BrowserRouter>
   );
 }
 
