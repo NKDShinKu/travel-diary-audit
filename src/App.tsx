@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from '@/components/layout.tsx';
 import TravelNoteList from '@/pages/travel-list/index.tsx';
 import LoginPage from '@/pages/login/index.tsx';
+import { Toaster } from "@/components/ui/sonner"
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
               </Route>
               <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          <Toaster></Toaster>
       </BrowserRouter>
   );
 }
