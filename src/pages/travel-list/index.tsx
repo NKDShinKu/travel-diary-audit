@@ -35,7 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-// 模拟获取当前用户信息，实际项目中应该从状态管理或Context中获取
+// 模拟获取当前用户信息
 const mockCurrentUser = {
     id: 1,
     username: 'admin',
@@ -186,8 +186,10 @@ const TravelNoteList: React.FC = () => {
     // 增加删除确认对话框状态
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [noteToDelete, setNoteToDelete] = useState<number | null>(null);
+    // 添加每页显示条数状态
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    const itemsPerPage = 10;
+    // 移除常量定义，改为使用状态
     const currentUser = mockCurrentUser;
 
     // 获取游记列表数据
@@ -212,7 +214,12 @@ const TravelNoteList: React.FC = () => {
         };
 
         fetchTravelNotes();
-    }, [statusFilter, currentPage]);
+    }, [statusFilter, currentPage, itemsPerPage]);
+    
+    // 当每页显示条数变化时，重置到第一页
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [itemsPerPage]);
 
     // 获取状态对应的显示文本和样式
     const getStatusBadge = (status: string) => {
@@ -301,7 +308,7 @@ const TravelNoteList: React.FC = () => {
     const isAdmin = currentUser.role === UserRole.ADMIN;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full py-5 px-15 bg-white shadow-md rounded-lg outline-none select-none">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">游记列表</h1>
                 <div className="flex items-center gap-2">
@@ -320,13 +327,12 @@ const TravelNoteList: React.FC = () => {
                 </div>
             </div>
 
-            <Table className="border">
+            <Table className="outline-none select-none" >
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[80px]">ID</TableHead>
                         <TableHead className="w-[200px]">标题</TableHead>
-                        <TableHead className="w-[100px]">作者</TableHead>
-                        <TableHead className="w-[100px]">创建时间</TableHead>
+                        <TableHead className="w-[150px]">作者</TableHead>
+                        <TableHead className="w-[200px]">创建时间</TableHead>
                         <TableHead className="w-[100px]">状态</TableHead>
                         <TableHead className="text-right">操作</TableHead>
                     </TableRow>
@@ -335,7 +341,6 @@ const TravelNoteList: React.FC = () => {
                     {travelNotes.length > 0 ? (
                         travelNotes.map((note) => (
                             <TableRow key={note.id}>
-                                <TableCell>{note.id}</TableCell>
                                 <TableCell>{note.title}</TableCell>
                                 <TableCell>{note.authorName}</TableCell>
                                 <TableCell>{note.createdAt}</TableCell>
@@ -391,32 +396,48 @@ const TravelNoteList: React.FC = () => {
                 </TableBody>
             </Table>
 
-            <Pagination>
-                <PaginationContent>
-                    <PaginationItem>
-                        <PaginationPrevious
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                        />
-                    </PaginationItem>
-                    {[...Array(totalPages)].map((_, index) => (
-                        <PaginationItem key={index}>
-                            <PaginationLink
-                                onClick={() => setCurrentPage(index + 1)}
-                                isActive={currentPage === index + 1}
-                            >
-                                {index + 1}
-                            </PaginationLink>
+            <div className="flex justify-between items-center">
+
+                <Pagination>
+                    {/* 每页显示条数选择 */}
+                    <div className="flex items-center gap-2">
+                        <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                            <SelectTrigger className="w-24">
+                                <SelectValue placeholder="条数" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="5">5条/页</SelectItem>
+                                <SelectItem value="10">10条/页</SelectItem>
+                                <SelectItem value="20">20条/页</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <PaginationContent>
+                        <PaginationItem>
+                            <PaginationPrevious
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                            />
                         </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                        <PaginationNext
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                        />
-                    </PaginationItem>
-                </PaginationContent>
-            </Pagination>
+                        {[...Array(totalPages)].map((_, index) => (
+                            <PaginationItem key={index}>
+                                <PaginationLink
+                                    onClick={() => setCurrentPage(index + 1)}
+                                    isActive={currentPage === index + 1}
+                                >
+                                    {index + 1}
+                                </PaginationLink>
+                            </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                            <PaginationNext
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                            />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            </div>
 
             {/* 对话框用于查看内容和拒绝原因 */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

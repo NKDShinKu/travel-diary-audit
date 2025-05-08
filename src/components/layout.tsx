@@ -5,7 +5,7 @@ const Layout: React.FC = () => {
 
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-100 bg-gradient-to-b from-blue-50 to-white">
             {/* 导航栏 */}
             <nav className="bg-white shadow">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -37,7 +37,7 @@ const Layout: React.FC = () => {
             </nav>
 
             {/* 内容区域 */}
-            <main className="py-10">
+            <main className="py-10 ">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <Outlet />
                 </div>
