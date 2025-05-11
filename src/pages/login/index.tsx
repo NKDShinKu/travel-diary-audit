@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/utils/AuthContext"
 
 type LoginFormValues = {
     username: string
@@ -27,18 +28,19 @@ export default function LoginForm() {
     })
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
+    const { login } = useAuth()
 
     const onSubmit = async (values: LoginFormValues) => {
         setLoading(true)
-        if(values.username === "admin" && values.password === "123456") {
-            // 模拟登录成功
+        try {
+            await login(values.username, values.password)
             toast.success("登录成功！")
             navigate('/')
-        } else {
-            // 模拟登录失败
-            toast.error("用户名或密码错误！")
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "登录失败")
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
     return (
@@ -55,11 +57,11 @@ export default function LoginForm() {
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 ">
                             <div className="space-y-4">
-                                {/* 用户名字段喵 */}
+                                {/* 用户名字段 */}
                                 <FormField
                                     control={form.control}
                                     name="username"
-                                    rules={{ required: "邮箱不能为空！" }}
+                                    rules={{ required: "用户名不能为空！" }}
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>用户名</FormLabel>
@@ -68,7 +70,6 @@ export default function LoginForm() {
                                                     placeholder="请输入用户名"
                                                     type="text"
                                                     {...field}
-
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -76,7 +77,7 @@ export default function LoginForm() {
                                     )}
                                 />
 
-                                {/* 密码字段喵 */}
+                                {/* 密码字段 */}
                                 <FormField
                                     control={form.control}
                                     name="password"
@@ -89,7 +90,6 @@ export default function LoginForm() {
                                                     placeholder="请输入密码"
                                                     type="password"
                                                     {...field}
-
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -98,7 +98,7 @@ export default function LoginForm() {
                                 />
                             </div>
 
-                            {/* 提交按钮喵 */}
+                            {/* 提交按钮 */}
                             <Button
                                 type="submit"
                                 className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500  focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:bg-blue-400 transition-colors duration-200"

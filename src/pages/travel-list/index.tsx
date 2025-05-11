@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TravelNote, TravelNoteStatus, UserRole } from '@/types';
+import { TravelNote, TravelNoteStatus, TravelNoteStatusType } from '@/types';
 import {
     Table,
     TableBody,
@@ -34,145 +34,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-
-// 模拟获取当前用户信息
-const mockCurrentUser = {
-    id: 1,
-    username: 'admin',
-    role: UserRole.ADMIN
-};
-
-// 模拟游记数据
-const mockTravelNotes: TravelNote[] = [
-    {
-        id: 1,
-        title: '北京三日游',
-        content: '故宫、长城、颐和园一网打尽',
-        authorName: '张三',
-        createdAt: '2023-10-01',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-    {
-        id: 2,
-        title: '上海美食之旅',
-        content: '品尝各种上海本地美食',
-        authorName: '李四',
-        createdAt: '2023-09-15',
-        status: TravelNoteStatus.APPROVED,
-        isDeleted: false
-    },
-    {
-        id: 3,
-        title: '成都休闲游记',
-        content: '悠闲的熊猫之旅',
-        authorName: '王五',
-        createdAt: '2023-09-10',
-        status: TravelNoteStatus.REJECTED,
-        rejectReason: '内容不完整',
-        isDeleted: false
-    },
-    {
-        id: 4,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 5,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 6,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 7,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 8,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 9,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 10,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 11,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 12,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 13,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-        {
-        id: 14,
-        title: '三亚海滩度假',
-        content: '美丽的海滩和阳光',
-        authorName: '赵六',
-        createdAt: '2023-08-20',
-        status: TravelNoteStatus.PENDING,
-        isDeleted: false
-    },
-
-];
+import { api } from '@/api';
+import { useAuth } from '@/utils/AuthContext';
 
 const TravelNoteList: React.FC = () => {
     const [travelNotes, setTravelNotes] = useState<TravelNote[]>([]);
@@ -183,45 +46,46 @@ const TravelNoteList: React.FC = () => {
     const [dialogMode, setDialogMode] = useState<'reject' | 'view' | null>(null);
     const [selectedNote, setSelectedNote] = useState<TravelNote | null>(null);
     const [rejectReason, setRejectReason] = useState('');
-    // 增加删除确认对话框状态
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [noteToDelete, setNoteToDelete] = useState<number | null>(null);
-    // 添加每页显示条数状态
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [loading, setLoading] = useState(false);
 
-    // 移除常量定义，改为使用状态
-    const currentUser = mockCurrentUser;
+    const { isAdmin } = useAuth();
 
-    // 获取游记列表数据
     useEffect(() => {
-        // 模拟API请求
-        const fetchTravelNotes = () => {
-            // 应用过滤器
-            let filteredNotes = [...mockTravelNotes].filter(note => !note.isDeleted);
+        const fetchTravelNotes = async () => {
+            setLoading(true);
+            try {
+                let notes: TravelNote[];
+                if (statusFilter === "all") {
+                    notes = await api.getTravelNotes();
+                } else {
+                    notes = await api.getTravelNotes(statusFilter as TravelNoteStatusType);
+                }
 
-            if (statusFilter !== "all") {
-                filteredNotes = filteredNotes.filter(note => note.status === statusFilter);
+                const totalItems = notes.length;
+                setTotalPages(Math.ceil(totalItems / itemsPerPage));
+
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const paginatedNotes = notes.slice(startIndex, startIndex + itemsPerPage);
+
+                setTravelNotes(paginatedNotes);
+            } catch (error) {
+                toast.error('获取游记列表失败');
+                console.error('Failed to fetch travel notes:', error);
+            } finally {
+                setLoading(false);
             }
-
-            const totalItems = filteredNotes.length;
-            setTotalPages(Math.ceil(totalItems / itemsPerPage));
-
-            // 分页
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const paginatedNotes = filteredNotes.slice(startIndex, startIndex + itemsPerPage);
-
-            setTravelNotes(paginatedNotes);
         };
 
         fetchTravelNotes();
     }, [statusFilter, currentPage, itemsPerPage]);
     
-    // 当每页显示条数变化时，重置到第一页
     useEffect(() => {
         setCurrentPage(1);
     }, [itemsPerPage]);
 
-    // 获取状态对应的显示文本和样式
     const getStatusBadge = (status: string) => {
         switch (status) {
             case TravelNoteStatus.PENDING:
@@ -235,26 +99,29 @@ const TravelNoteList: React.FC = () => {
         }
     };
 
-    // 处理查看内容
     const handleViewContent = (note: TravelNote) => {
         setSelectedNote(note);
         setDialogMode('view');
         setIsDialogOpen(true);
     };
 
-    // 处理审核通过
-    const handleApprove = (noteId: number) => {
-        setTravelNotes(prevNotes =>
-            prevNotes.map(note =>
-                note.id === noteId
-                    ? { ...note, status: TravelNoteStatus.APPROVED }
-                    : note
-            )
-        );
-        toast.success("审核已通过！");
+    const handleApprove = async (noteId: number) => {
+        try {
+            await api.approveTravelNote(noteId);
+            setTravelNotes(prevNotes =>
+                prevNotes.map(note =>
+                    note.id === noteId
+                        ? { ...note, status: TravelNoteStatus.APPROVED }
+                        : note
+                )
+            );
+            toast.success("审核已通过！");
+        } catch (error) {
+            toast.error('操作失败');
+            console.error('Failed to approve note:', error);
+        }
     };
 
-    // 打开拒绝对话框
     const handleOpenRejectDialog = (note: TravelNote) => {
         setSelectedNote(note);
         setDialogMode('reject');
@@ -262,50 +129,52 @@ const TravelNoteList: React.FC = () => {
         setIsDialogOpen(true);
     };
 
-    // 提交拒绝
-    const handleReject = () => {
+    const handleReject = async () => {
         if (!rejectReason.trim()) {
             toast.error("请填写拒绝原因");
             return;
         }
 
         if (selectedNote) {
-            setTravelNotes(prevNotes =>
-                prevNotes.map(note =>
-                    note.id === selectedNote.id
-                        ? { ...note, status: TravelNoteStatus.REJECTED, rejectReason }
-                        : note
-                )
-            );
-            toast.success("已拒绝该游记");
-            setIsDialogOpen(false);
-            setRejectReason('');
+            try {
+                await api.rejectTravelNote(selectedNote.id, rejectReason);
+                setTravelNotes(prevNotes =>
+                    prevNotes.map(note =>
+                        note.id === selectedNote.id
+                            ? { ...note, status: TravelNoteStatus.REJECTED, rejectReason }
+                            : note
+                    )
+                );
+                toast.success("已拒绝该游记");
+                setIsDialogOpen(false);
+                setRejectReason('');
+            } catch (error) {
+                toast.error('操作失败');
+                console.error('Failed to reject note:', error);
+            }
         }
     };
 
-// 打开删除确认对话框
     const handleOpenDeleteDialog = (noteId: number) => {
         setNoteToDelete(noteId);
         setDeleteDialogOpen(true);
     };
 
-// 处理删除确认
-    const handleConfirmDelete = () => {
+    const handleConfirmDelete = async () => {
         if (noteToDelete) {
-            setTravelNotes(prevNotes =>
-                prevNotes.map(note =>
-                    note.id === noteToDelete
-                        ? { ...note, isDeleted: true }
-                        : note
-                ).filter(note => !note.isDeleted)
-            );
-            toast.success("已成功删除");
-            setDeleteDialogOpen(false);
+            try {
+                await api.deleteTravelNote(noteToDelete);
+                setTravelNotes(prevNotes =>
+                    prevNotes.filter(note => note.id !== noteToDelete)
+                );
+                toast.success("已成功删除");
+                setDeleteDialogOpen(false);
+            } catch (error) {
+                toast.error('删除失败');
+                console.error('Failed to delete note:', error);
+            }
         }
     };
-
-    // 判断当前用户是否为管理员
-    const isAdmin = currentUser.role === UserRole.ADMIN;
 
     return (
         <div className="space-y-6 w-full py-5 px-15 bg-white shadow-md rounded-lg outline-none select-none">
@@ -327,7 +196,7 @@ const TravelNoteList: React.FC = () => {
                 </div>
             </div>
 
-            <Table className="outline-none select-none" >
+            <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead className="w-[200px]">标题</TableHead>
@@ -338,7 +207,13 @@ const TravelNoteList: React.FC = () => {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {travelNotes.length > 0 ? (
+                    {loading ? (
+                        <TableRow>
+                            <TableCell colSpan={6} className="text-center py-6">
+                                加载中...
+                            </TableCell>
+                        </TableRow>
+                    ) : travelNotes.length > 0 ? (
                         travelNotes.map((note) => (
                             <TableRow key={note.id}>
                                 <TableCell>{note.title}</TableCell>
@@ -399,11 +274,10 @@ const TravelNoteList: React.FC = () => {
             <div className="flex justify-between items-center">
 
                 <Pagination>
-                    {/* 每页显示条数选择 */}
                     <div className="flex items-center gap-2">
                         <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
                             <SelectTrigger className="w-24">
-                                <SelectValue placeholder="条数" />
+                                <SelectValue placeholder="条数"/>
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="5">5条/页</SelectItem>
@@ -437,9 +311,10 @@ const TravelNoteList: React.FC = () => {
                         </PaginationItem>
                     </PaginationContent>
                 </Pagination>
+
+
             </div>
 
-            {/* 对话框用于查看内容和拒绝原因 */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-xl">
                     <DialogHeader>
@@ -455,7 +330,7 @@ const TravelNoteList: React.FC = () => {
                                 <p>{selectedNote.title}</p>
                             </div>
                             <div>
-                                <h3 className="font-semibold">作者</h3>
+                            <h3 className="font-semibold">作者</h3>
                                 <p>{selectedNote.authorName}</p>
                             </div>
                             <div>
@@ -501,7 +376,6 @@ const TravelNoteList: React.FC = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* 删除确认对话框 */}
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
