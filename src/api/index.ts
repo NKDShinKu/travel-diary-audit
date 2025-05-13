@@ -1,9 +1,5 @@
-import { TravelNote, TravelNoteStatusType, TravelNoteDetail } from '@/types';
+import { TravelNoteDetail, ResponseTravelNote } from '@/types';
 import request from '@/utils/request';
-
-interface responseTravelNote {
-    items: TravelNote[];
-}
 
 // API服务
 export const api = {
@@ -11,9 +7,21 @@ export const api = {
         return request.post('/auth/signin', { username, password })
     },
 
-    getTravelNotes: (status?: TravelNoteStatusType): Promise<responseTravelNote> => {
-        console.log(status)
-        return request.get('/posts/list')
+    getTravelNotes: (page?: number, limit?: number): Promise<ResponseTravelNote> => {
+        return request.get('/posts/list', { params: { page, limit } })
+    },
+
+    // 获取各种状态的游记列表
+    getTravelNotesApproved: (page?: number, limit?: number): Promise<ResponseTravelNote> => {
+        return request.get('/posts/list/approved', { params: { page, limit } })
+    },
+
+    getTravelNotesPending: (page?: number, limit?: number): Promise<ResponseTravelNote> => {
+        return request.get('/posts/list/pending', { params: { page, limit } })
+    },
+
+    getTravelNotesRejected: (page?: number, limit?: number): Promise<ResponseTravelNote> => {
+        return request.get('/posts/list/rejected', { params: { page, limit } })
     },
 
     getTrvelNoteDetails: (id: string): Promise<TravelNoteDetail> => {
@@ -25,19 +33,5 @@ export const api = {
         return request.post(`/posts/${id}/audit`, { auditStatus, rejectReason })
     },
 
-    // // 审核通过
-    // approveTravelNote: async (id: number): Promise<void> => {
-    //     return request.post(`/posts/${id}/audit`, { auditStatus: TravelNoteStatus.APPROVED  })
-    // },
-    //
-    // // 审核拒绝
-    // rejectTravelNote: async (id: number, rejectReason: string): Promise<void> => {
-    //     return request.post(`/posts/${id}/audit`, { auditStatus: TravelNoteStatus.REJECTED, rejectReason })
-    // },
-    //
-    // // 逻辑删除
-    // deleteTravelNote: async (id: number): Promise<void> => {
-    //     return request.post(`/posts/${id}/audit`, { auditStatus: TravelNoteStatus.DELETED })
-    // }
 
 };

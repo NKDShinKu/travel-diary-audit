@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TravelNote, TravelNoteStatus, TravelNoteStatusType, TravelNoteDetail } from '@/types';
+import { TravelNote, TravelNoteStatus, TravelNoteDetail } from '@/types';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Table,
@@ -43,12 +43,13 @@ const TravelNoteList: React.FC = () => {
     const [travelNotes, setTravelNotes] = useState<TravelNote[]>([]);
     const [travelNoteDetails, setTravelNoteDetails] = useState<TravelNoteDetail | null >(null)
     const [statusFilter, setStatusFilter] = useState<string>("all");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogMode, setDialogMode] = useState<'reject' | 'view' | 'deleted' | 'edit-rejected' | 'edit-approved' | null>(null);
     const [selectedNote, setSelectedNote] = useState<TravelNote | null>(null);
     const [rejectReason, setRejectReason] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
     const [loadingStatus, setLoadingStatus] = useState(false);
     const [isApproved, setIsApproved] = useState(false);
@@ -57,22 +58,24 @@ const TravelNoteList: React.FC = () => {
     const fetchTravelNotes = async () => {
         setLoading(true);
         try {
-            let notes: TravelNote[];
-            if (statusFilter === "all") {
-                const res = await api.getTravelNotes();
-                notes = res.items;
-            } else {
-                const res = await api.getTravelNotes(statusFilter as TravelNoteStatusType);
-                notes = res.items;
+            if(statusFilter === 'all') {
+                const res = await api.getTravelNotes(currentPage, itemsPerPage);
+                setTravelNotes(res.items)
+                setTotalPages(res.totalPages)
+            } else if(statusFilter === TravelNoteStatus.PENDING) {
+                const res = await api.getTravelNotesPending(currentPage, itemsPerPage);
+                setTravelNotes(res.items)
+                setTotalPages(res.totalPages)
+            } else if(statusFilter === TravelNoteStatus.APPROVED) {
+                const res = await api.getTravelNotesApproved(currentPage, itemsPerPage);
+                setTravelNotes(res.items)
+                setTotalPages(res.totalPages)
+            } else if(statusFilter === TravelNoteStatus.REJECTED) {
+                const res = await api.getTravelNotesRejected(currentPage, itemsPerPage);
+                setTravelNotes(res.items)
+                setTotalPages(res.totalPages)
             }
-            console.log(notes)
-            const totalItems = notes.length;
-            setTotalPages(Math.ceil(totalItems / itemsPerPage));
 
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const paginatedNotes = notes.slice(startIndex, startIndex + itemsPerPage);
-
-            setTravelNotes(paginatedNotes);
         } catch (error) {
             toast.error('获取游记列表失败');
             console.error('Failed to fetch travel notes:', error);
@@ -377,6 +380,7 @@ const TravelNoteList: React.FC = () => {
                                 <SelectValue placeholder="条数"/>
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="3">3条/页</SelectItem>
                                 <SelectItem value="5">5条/页</SelectItem>
                                 <SelectItem value="10">10条/页</SelectItem>
                                 <SelectItem value="20">20条/页</SelectItem>

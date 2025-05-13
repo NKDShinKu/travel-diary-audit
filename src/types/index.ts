@@ -38,6 +38,7 @@ export interface TravelNote {
     rejectReason?: string; // 拒绝原因
     author: {
         username: string;
+        avatar?: string | null;
     }
 }
 
@@ -54,5 +55,14 @@ export interface TravelNoteDetail {
     quick_tag: number;
     author: {
         username: string;
+        avatar?: string | null;
     }
+}
+
+export interface ResponseTravelNote {
+    items: TravelNote[];
+    total: number;
+    page: number;
+    totalPages: number;
+    hasMore: boolean;
 }
