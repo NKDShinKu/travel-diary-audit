@@ -1,10 +1,10 @@
 // 游记状态
 export const TravelNoteStatus = {
-    PENDING: '32', // 待审核
-    APPROVED: '64', // 已通过
-    REJECTED: '16', // 未通过
-    DELETED: '8', // 已删除
-    ALL: '0', // 全部
+    APPROVED: 'approved',
+    PENDING: 'pending',
+    REJECTED: 'rejected',
+    DELETED: 'deleted',
+    NONE: 'none'
 } as const;
 
 // 游记状态类型定义
@@ -30,11 +30,11 @@ export interface User {
 
 // 游记类型定义
 export interface TravelNote {
-    id: number;
+    id: string;
     title: string;
     date: string;
     coverImage?: string;
-    quickTag: TravelNoteStatusType;
+    quickTag: number;
     rejectReason?: string; // 拒绝原因
     author: {
         username: string;
@@ -51,7 +51,7 @@ export interface TravelNoteDetail {
     video?: string | null;
     rejectReason?: string | null; // 拒绝原因
     coverImage?: string | null;
-    quick_tag: TravelNoteStatusType;
+    quick_tag: number;
     author: {
         username: string;
     }

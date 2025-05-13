@@ -37,7 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { api } from '@/api';
 import { useAuth } from '@/utils/AuthContext';
-
+import { getTravelNoteStatus, setTravelNoteStatus, markAsDeleted } from '@/utils/quick-tag.ts';
 
 const TravelNoteList: React.FC = () => {
     const [travelNotes, setTravelNotes] = useState<TravelNote[]>([]);
@@ -48,7 +48,6 @@ const TravelNoteList: React.FC = () => {
     const [dialogMode, setDialogMode] = useState<'reject' | 'view' | 'deleted' | 'edit-rejected' | 'edit-approved' | null>(null);
     const [selectedNote, setSelectedNote] = useState<TravelNote | null>(null);
     const [rejectReason, setRejectReason] = useState('');
-    const [noteToDelete, setNoteToDelete] = useState<number | null>(null);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [loading, setLoading] = useState(false);
     const [loadingStatus, setLoadingStatus] = useState(false);
@@ -66,6 +65,7 @@ const TravelNoteList: React.FC = () => {
                 const res = await api.getTravelNotes(statusFilter as TravelNoteStatusType);
                 notes = res.items;
             }
+            console.log(notes)
             const totalItems = notes.length;
             setTotalPages(Math.ceil(totalItems / itemsPerPage));
 
@@ -90,7 +90,7 @@ const TravelNoteList: React.FC = () => {
     }, [itemsPerPage]);
 
     // 获取游记详情
-    const fetchTravelNoteDetails = async (id: number) => {
+    const fetchTravelNoteDetails = async (id: string) => {
         setLoadingStatus(true);
         try {
             const noteDetails = await api.getTrvelNoteDetails(id);
@@ -117,14 +117,15 @@ const TravelNoteList: React.FC = () => {
     };
 
     // 通过游记
-    const handleApprove = async (noteId: number) => {
+    const handleApprove = async (noteId: string, quickTag:number) => {
         setLoadingStatus(true)
         try {
-            await api.approveTravelNote(noteId);
+            const settingStatus:number = setTravelNoteStatus(TravelNoteStatus.APPROVED, quickTag)
+            await api.auditTravelNote(noteId, settingStatus);
             setTravelNotes(prevNotes =>
                 prevNotes.map(note =>
                     note.id === noteId
-                        ? { ...note, quickTag: TravelNoteStatus.APPROVED }
+                        ? { ...note, quickTag: settingStatus }
                         : note
                 )
             );
@@ -162,8 +163,8 @@ const TravelNoteList: React.FC = () => {
     };
 
     // 打开删除游记菜单
-    const handleOpenDeleteDialog = (noteId: number) => {
-        setNoteToDelete(noteId);
+    const handleOpenDeleteDialog = (note: TravelNote) => {
+        setSelectedNote(note)
         setDialogMode('deleted')
         setIsDialogOpen(true);
     };
@@ -178,11 +179,12 @@ const TravelNoteList: React.FC = () => {
         if (selectedNote) {
             setLoadingStatus(true)
             try {
-                await api.rejectTravelNote(selectedNote.id, rejectReason);
+                const settingStatus:number = setTravelNoteStatus(TravelNoteStatus.REJECTED, Number(selectedNote.quickTag))
+                await api.auditTravelNote(selectedNote.id, settingStatus, rejectReason);
                 setTravelNotes(prevNotes =>
                     prevNotes.map(note =>
                         note.id === selectedNote.id
-                            ? { ...note, quickTag: TravelNoteStatus.REJECTED, rejectReason }
+                            ? { ...note, quickTag: settingStatus, rejectReason }
                             : note
                     )
                 );
@@ -201,10 +203,11 @@ const TravelNoteList: React.FC = () => {
 
     // 删除游记
     const handleConfirmDelete = async () => {
-        if (noteToDelete) {
+        if (selectedNote) {
             setLoading(true)
             try {
-                await api.deleteTravelNote(noteToDelete);
+                const settingStatus:number = markAsDeleted(selectedNote.quickTag)
+                await api.auditTravelNote(selectedNote.id, settingStatus);
 
                 // 删除成功后刷新列表数据
                 fetchTravelNotes()
@@ -291,7 +294,7 @@ const TravelNoteList: React.FC = () => {
                                 <TableCell>{note.title}</TableCell>
                                 <TableCell>{note.author.username}</TableCell>
                                 <TableCell>{new Date(note.date).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')}</TableCell>
-                                <TableCell>{getStatusBadge(note.quickTag)}</TableCell>
+                                <TableCell>{getStatusBadge(getTravelNoteStatus(Number(note.quickTag)))}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-2">
                                         <Button
@@ -301,12 +304,12 @@ const TravelNoteList: React.FC = () => {
                                         >
                                             查看
                                         </Button>
-                                        {(note.quickTag === TravelNoteStatus.PENDING || note.quickTag === TravelNoteStatus.ALL) && (
+                                        {(getTravelNoteStatus(Number(note.quickTag)) === TravelNoteStatus.PENDING || getTravelNoteStatus(Number(note.quickTag)) === TravelNoteStatus.NONE) && (
                                             <>
                                                 <Button
                                                     variant="default"
                                                     size="sm"
-                                                    onClick={() => handleApprove(note.id)}
+                                                    onClick={() => handleApprove(note.id, Number(note.quickTag))}
                                                 >
                                                     通过
                                                 </Button>
@@ -320,7 +323,7 @@ const TravelNoteList: React.FC = () => {
                                             </>
                                         )}
                                         {
-                                            note.quickTag === TravelNoteStatus.REJECTED && (
+                                            getTravelNoteStatus(Number(note.quickTag)) === TravelNoteStatus.REJECTED && (
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -331,7 +334,7 @@ const TravelNoteList: React.FC = () => {
                                             )
                                         }
                                         {
-                                            note.quickTag === TravelNoteStatus.APPROVED && (
+                                            getTravelNoteStatus(Number(note.quickTag)) === TravelNoteStatus.APPROVED && (
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -346,7 +349,7 @@ const TravelNoteList: React.FC = () => {
                                                 variant="outline"
                                                 size="sm"
                                                 className="text-red-500"
-                                                onClick={() => handleOpenDeleteDialog(note.id)}
+                                                onClick={() => handleOpenDeleteDialog(note)}
                                             >
                                                 删除
                                             </Button>
@@ -456,7 +459,7 @@ const TravelNoteList: React.FC = () => {
                                     </video>
                                 </div>
                             )}
-                            {travelNoteDetails.quick_tag === TravelNoteStatus.REJECTED && (
+                            {getTravelNoteStatus(travelNoteDetails.quick_tag) === TravelNoteStatus.REJECTED && (
                                 <div>
                                     <h3 className="font-semibold">拒绝原因</h3>
                                     <p className="text-red-500">{travelNoteDetails.rejectReason}</p>
@@ -543,7 +546,7 @@ const TravelNoteList: React.FC = () => {
                                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                                             取消
                                         </Button>
-                                        <Button variant="default" onClick={() => handleApprove(selectedNote.id)}>
+                                        <Button variant="default" onClick={() => handleApprove(selectedNote.id, Number(selectedNote.quickTag))}>
                                             确认通过
                                         </Button>
                                     </DialogFooter>
