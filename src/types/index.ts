@@ -1,8 +1,10 @@
 // 游记状态
 export const TravelNoteStatus = {
-    PENDING: 'pending', // 待审核
-    APPROVED: 'approved', // 已通过
-    REJECTED: 'rejected', // 未通过
+    PENDING: '32', // 待审核
+    APPROVED: '64', // 已通过
+    REJECTED: '16', // 未通过
+    DELETED: '8', // 已删除
+    ALL: '0', // 全部
 } as const;
 
 // 游记状态类型定义
@@ -22,18 +24,35 @@ export type UserRoleType = typeof UserRole[keyof typeof UserRole];
 export interface User {
     id: number;
     username: string;
-    role: UserRoleType;
-    token?: string;
+    userGroup: UserRoleType;
+    email: string;
 }
 
 // 游记类型定义
 export interface TravelNote {
     id: number;
     title: string;
-    content: string;
-    authorName: string;
-    createdAt: string;
-    status: TravelNoteStatusType;
+    date: string;
+    coverImage?: string;
+    quickTag: TravelNoteStatusType;
     rejectReason?: string; // 拒绝原因
-    isDeleted: boolean; // 逻辑删除标记
+    author: {
+        username: string;
+    }
+}
+
+
+export interface TravelNoteDetail {
+    id: string;
+    title: string;
+    content: string;
+    date: string;
+    images: string[];
+    video?: string | null;
+    rejectReason?: string | null; // 拒绝原因
+    coverImage?: string | null;
+    quick_tag: TravelNoteStatusType;
+    author: {
+        username: string;
+    }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import {useEffect, useState} from "react"
 import { useForm } from "react-hook-form"
 import {
     Form,
@@ -20,6 +20,7 @@ type LoginFormValues = {
 }
 
 export default function LoginForm() {
+
     const form = useForm<LoginFormValues>({
         defaultValues: {
             username: "",
@@ -28,7 +29,14 @@ export default function LoginForm() {
     })
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
-    const { login } = useAuth()
+    const { login, isAuthenticated } = useAuth()
+
+    // 检查用户是否已登录
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/');
+        }
+    }, [isAuthenticated, navigate]);
 
     const onSubmit = async (values: LoginFormValues) => {
         setLoading(true)

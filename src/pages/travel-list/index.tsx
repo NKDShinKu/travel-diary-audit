@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { TravelNote, TravelNoteStatus, TravelNoteStatusType } from '@/types';
+import { TravelNote, TravelNoteStatus, TravelNoteStatusType, TravelNoteDetail } from '@/types';
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Table,
     TableBody,
@@ -37,8 +38,10 @@ import { toast } from "sonner";
 import { api } from '@/api';
 import { useAuth } from '@/utils/AuthContext';
 
+
 const TravelNoteList: React.FC = () => {
     const [travelNotes, setTravelNotes] = useState<TravelNote[]>([]);
+    const [travelNoteDetails, setTravelNoteDetails] = useState<TravelNoteDetail | null >(null)
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);    const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -52,37 +55,53 @@ const TravelNoteList: React.FC = () => {
     const [isApproved, setIsApproved] = useState(false);
     const { isAdmin } = useAuth();
 
-    useEffect(() => {
-        const fetchTravelNotes = async () => {
-            setLoading(true);
-            try {
-                let notes: TravelNote[];
-                if (statusFilter === "all") {
-                    notes = await api.getTravelNotes();
-                } else {
-                    notes = await api.getTravelNotes(statusFilter as TravelNoteStatusType);
-                }
-
-                const totalItems = notes.length;
-                setTotalPages(Math.ceil(totalItems / itemsPerPage));
-
-                const startIndex = (currentPage - 1) * itemsPerPage;
-                const paginatedNotes = notes.slice(startIndex, startIndex + itemsPerPage);
-
-                setTravelNotes(paginatedNotes);
-            } catch (error) {
-                toast.error('获取游记列表失败');
-                console.error('Failed to fetch travel notes:', error);
-            } finally {
-                setLoading(false);
+    const fetchTravelNotes = async () => {
+        setLoading(true);
+        try {
+            let notes: TravelNote[];
+            if (statusFilter === "all") {
+                const res = await api.getTravelNotes();
+                notes = res.items;
+            } else {
+                const res = await api.getTravelNotes(statusFilter as TravelNoteStatusType);
+                notes = res.items;
             }
-        };
+            const totalItems = notes.length;
+            setTotalPages(Math.ceil(totalItems / itemsPerPage));
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const paginatedNotes = notes.slice(startIndex, startIndex + itemsPerPage);
+
+            setTravelNotes(paginatedNotes);
+        } catch (error) {
+            toast.error('获取游记列表失败');
+            console.error('Failed to fetch travel notes:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchTravelNotes();
     }, [statusFilter, currentPage, itemsPerPage]);
     
     useEffect(() => {
         setCurrentPage(1);
     }, [itemsPerPage]);
+
+    // 获取游记详情
+    const fetchTravelNoteDetails = async (id: number) => {
+        setLoadingStatus(true);
+        try {
+            const noteDetails = await api.getTrvelNoteDetails(id);
+            setTravelNoteDetails(noteDetails);
+        } catch (error) {
+            toast.error('获取游记详情失败');
+            console.error('Failed to fetch travel note details:', error);
+        } finally {
+            setLoadingStatus(false);
+        }
+    };
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -105,7 +124,7 @@ const TravelNoteList: React.FC = () => {
             setTravelNotes(prevNotes =>
                 prevNotes.map(note =>
                     note.id === noteId
-                        ? { ...note, status: TravelNoteStatus.APPROVED }
+                        ? { ...note, quickTag: TravelNoteStatus.APPROVED }
                         : note
                 )
             );
@@ -120,10 +139,18 @@ const TravelNoteList: React.FC = () => {
     };
 
     // 打开查看游记菜单
-    const handleViewContent = (note: TravelNote) => {
+    const handleViewContent = async (note: TravelNote) => {
         setSelectedNote(note);
         setDialogMode('view');
         setIsDialogOpen(true);
+        setTravelNoteDetails(null)
+        try {
+            await fetchTravelNoteDetails(note.id);
+            console.log(travelNoteDetails)
+        } catch (error) {
+            toast.error('获取游记详情失败');
+            console.error('Failed to fetch travel note details:', error);
+        }
     };
 
     // 打开拒绝游记菜单
@@ -155,11 +182,12 @@ const TravelNoteList: React.FC = () => {
                 setTravelNotes(prevNotes =>
                     prevNotes.map(note =>
                         note.id === selectedNote.id
-                            ? { ...note, status: TravelNoteStatus.REJECTED, rejectReason }
+                            ? { ...note, quickTag: TravelNoteStatus.REJECTED, rejectReason }
                             : note
                     )
                 );
                 toast.success("已拒绝该游记");
+                console.log(travelNotes)
                 setIsDialogOpen(false);
                 setRejectReason('');
             } catch (error) {
@@ -179,34 +207,8 @@ const TravelNoteList: React.FC = () => {
                 await api.deleteTravelNote(noteToDelete);
 
                 // 删除成功后刷新列表数据
-                const fetchData = async () => {
-                    try {
-                        let notes: TravelNote[];
-                        if (statusFilter === "all") {
-                            notes = await api.getTravelNotes();
-                        } else {
-                            notes = await api.getTravelNotes(statusFilter as TravelNoteStatusType);
-                        }
+                fetchTravelNotes()
 
-                        const totalItems = notes.length;
-                        const newTotalPages = Math.ceil(totalItems / itemsPerPage);
-                        setTotalPages(newTotalPages);
-
-                        // 如果当前页已经没有数据了（例如删除了最后一条记录），则返回前一页
-                        const newCurrentPage = currentPage > newTotalPages ? Math.max(1, newTotalPages) : currentPage;
-                        setCurrentPage(newCurrentPage);
-
-                        const startIndex = (newCurrentPage - 1) * itemsPerPage;
-                        const paginatedNotes = notes.slice(startIndex, startIndex + itemsPerPage);
-
-                        setTravelNotes(paginatedNotes);
-                    } catch (error) {
-                        toast.error('获取游记列表失败');
-                        console.error('Failed to fetch travel notes:', error);
-                    }
-                };
-
-                fetchData();
                 toast.success("已成功删除");
                 setIsDialogOpen(false)
             } catch (error) {
@@ -267,9 +269,13 @@ const TravelNoteList: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                     {loadingStatus && (
-                        <div className="flex fixed z-100 inset-0 items-center justify-center h-full">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
-                        </div>
+                        <TableRow>
+                            <TableCell className="fixed z-100 inset-0">
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
+                                </div>
+                            </TableCell>
+                        </TableRow>
                     )}
                     {loading ? (
                         <TableRow>
@@ -283,9 +289,9 @@ const TravelNoteList: React.FC = () => {
                         travelNotes.map((note) => (
                             <TableRow key={note.id}>
                                 <TableCell>{note.title}</TableCell>
-                                <TableCell>{note.authorName}</TableCell>
-                                <TableCell>{note.createdAt}</TableCell>
-                                <TableCell>{getStatusBadge(note.status)}</TableCell>
+                                <TableCell>{note.author.username}</TableCell>
+                                <TableCell>{new Date(note.date).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')}</TableCell>
+                                <TableCell>{getStatusBadge(note.quickTag)}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-2">
                                         <Button
@@ -295,7 +301,7 @@ const TravelNoteList: React.FC = () => {
                                         >
                                             查看
                                         </Button>
-                                        {note.status === TravelNoteStatus.PENDING && (
+                                        {(note.quickTag === TravelNoteStatus.PENDING || note.quickTag === TravelNoteStatus.ALL) && (
                                             <>
                                                 <Button
                                                     variant="default"
@@ -314,7 +320,7 @@ const TravelNoteList: React.FC = () => {
                                             </>
                                         )}
                                         {
-                                            note.status === TravelNoteStatus.REJECTED && (
+                                            note.quickTag === TravelNoteStatus.REJECTED && (
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -325,7 +331,7 @@ const TravelNoteList: React.FC = () => {
                                             )
                                         }
                                         {
-                                            note.status === TravelNoteStatus.APPROVED && (
+                                            note.quickTag === TravelNoteStatus.APPROVED && (
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -406,7 +412,7 @@ const TravelNoteList: React.FC = () => {
                 <DialogContent
                     className={
                         'transition-all ' +
-                        (dialogMode === 'view' ? 'max-w-5xl h-4/5' : '') +
+                        (dialogMode === 'view' ? 'max-w-5xl h-4/5 overflow-hidden' : '') +
                         (dialogMode === 'deleted' ? 'max-w-md' : '') +
                         (dialogMode === 'reject' ? 'max-w-md' : '') +
                         (dialogMode === 'edit-rejected' ? 'max-w-md' : '') +
@@ -423,27 +429,40 @@ const TravelNoteList: React.FC = () => {
                         </DialogTitle>
                     </DialogHeader>
 
-                    {dialogMode === 'view' && selectedNote && (
-                        <div className="space-y-4 w-2xl">
-                            <div>
-                                <h3 className="font-semibold">标题</h3>
-                                <p>{selectedNote.title}</p>
+                    {dialogMode === 'view' && travelNoteDetails && (
+                        <ScrollArea className="space-y-4 w-full h-150 p-3">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-gray-600 font-bold">标题：{travelNoteDetails.title}</h2>
+                                <p className="text-gray-600">作者：{travelNoteDetails.author.username}</p>
+                                <p className="text-gray-600">发布时间：{new Date(travelNoteDetails.date).toLocaleString('zh-CN', {hour12: false}).replace(/\//g, '-')}</p>
                             </div>
-                            <div>
-                            <h3 className="font-semibold">作者</h3>
-                                <p>{selectedNote.authorName}</p>
+
+                            <p
+                                className="mt-4"
+                                dangerouslySetInnerHTML={{
+                                    __html: travelNoteDetails.content.replace(/\n/g, '<br />')
+                                }}
+                            ></p>
+                            <div className="mt-4 space-y-2">
+                                {travelNoteDetails.images.map((image, index) => (
+                                    <img key={index} src={image} alt={`Image ${index + 1}`} className="w-full rounded-lg" />
+                                ))}
                             </div>
-                            <div>
-                                <h3 className="font-semibold">内容</h3>
-                                <p className="whitespace-pre-wrap">{selectedNote.content}</p>
-                            </div>
-                            {selectedNote.status === TravelNoteStatus.REJECTED && (
-                                <div>
-                                    <h3 className="font-semibold">拒绝原因</h3>
-                                    <p className="text-red-500">{selectedNote.rejectReason}</p>
+                            {travelNoteDetails.video && (
+                                <div className="mt-4">
+                                    <video controls className="w-full rounded-lg">
+                                        <source src={travelNoteDetails.video} type="video/mp4" />
+                                        您的浏览器不支持视频播放。
+                                    </video>
                                 </div>
                             )}
-                        </div>
+                            {travelNoteDetails.quick_tag === TravelNoteStatus.REJECTED && (
+                                <div>
+                                    <h3 className="font-semibold">拒绝原因</h3>
+                                    <p className="text-red-500">{travelNoteDetails.rejectReason}</p>
+                                </div>
+                            )}
+                        </ScrollArea>
                     )}
 
                     {dialogMode === 'reject' && (
