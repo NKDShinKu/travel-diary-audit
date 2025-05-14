@@ -12,7 +12,8 @@ interface RefreshResponse {
     refreshToken: string;
 }
 
-const BASE_URL = 'https://travel.achamster.live/api';
+// 使用环境变量获取API基础URL
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://travel.achamster.live/api';
 
 // 创建 axios 实例
 const request: AxiosInstance = axios.create({
@@ -21,6 +22,8 @@ const request: AxiosInstance = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    // 添加跨域支持
+    withCredentials: true,
 });
 
 let isRefreshing = false;
@@ -44,6 +47,11 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
     response => {
+        // 成功状态码处理：200和201都是成功的响应
+        // 201 Created 表示成功创建资源，在登录和注册时后端可能返回此状态码
+        if (response.status === 200 || response.status === 201) {
+            return response.data;
+        }
         return response.data;
     },
     async error => {
@@ -110,8 +118,17 @@ request.interceptors.response.use(
             } finally {
                 isRefreshing = false;
             }
+        }        // 特殊处理 201 状态码（一般表示资源创建成功，例如登录成功）
+        if (error.response?.status === 201) {
+            return error.response.data;
         }
 
+        // 处理可能的 CORS 错误
+        if (!error.response && error.message === 'Network Error') {
+            console.error('可能存在跨域问题:', error);
+            return Promise.reject(new Error('网络请求失败，可能是跨域限制导致'));
+        }
+        
         // 其他错误处理
         return Promise.reject(error);
     }

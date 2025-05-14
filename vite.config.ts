@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: './',
   plugins: [
     react(),
     tailwindcss()
@@ -14,5 +15,15 @@ export default defineConfig({
       { find: '@', replacement: path.resolve(__dirname, 'src') },
       { find: '@/*', replacement: path.resolve(__dirname, 'src/*') },
     ],
+  },
+  server: {
+    proxy: {
+      // 开发环境下的API代理配置
+      '/api': {
+        target: 'https://travel.achamster.live',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 })

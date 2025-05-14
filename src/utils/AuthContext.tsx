@@ -35,13 +35,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // 登录方法
     const login = async (username: string, password: string) => {
-        const res = await api.login(username, password);
-        const user = res.data;
-        setCurrentUser(user.userInfo);
-        setCurrentToken(user.token);
-        localStorage.setItem('userInfo', JSON.stringify(user.userInfo));
-        localStorage.setItem('token', user.token);
-        localStorage.setItem('refreshToken', user.refreshToken);
+        try {
+            const res = await api.login(username, password);
+            // 检查响应格式是否符合预期
+            if (!res || !res.data || !res.data.token) {
+                throw new Error('登录响应格式不正确');
+            }
+            const user = res.data;
+            setCurrentUser(user.userInfo);
+            setCurrentToken(user.token);
+            localStorage.setItem('userInfo', JSON.stringify(user.userInfo));
+            localStorage.setItem('token', user.token);
+            localStorage.setItem('refreshToken', user.refreshToken);
+        } catch (error) {
+            console.error('登录失败:', error);
+            // 检查是否为跨域错误 (无法直接检测 CORS 错误，但可以检查特定的属性)
+            if (error instanceof Error && error.message.includes('Network Error')) {
+                throw new Error('网络请求失败');
+            }
+            throw error; // 重新抛出错误以便上层组件处理
+        }
     };
 
     // 登出方法
