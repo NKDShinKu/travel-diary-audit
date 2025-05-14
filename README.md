@@ -1,54 +1,86 @@
-# React + TypeScript + Vite
+# travel-diary-audit
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 项目概述
 
-Currently, two official plugins are available:
+一个用于管理和审核用户发布的游记的系统。该系统支持登录、游记状态筛选、搜索功能以及基于角色的权限管理，旨在为审核人员和管理员提供高效的游记管理体验。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 详细功能
 
-## Expanding the ESLint configuration
+### 1. 游记管理
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **状态分类**：游记分为三种状态：
+  - 待审核：用户新发布游记的初始状态。
+  - 已通过：审核人员审查通过后。
+  - 未通过：审核人员审查拒绝后。
+  - 已删除：逻辑删除（只是标记一下）。
+- **管理操作**：
+  - 审核通过：将游记状态置为「已通过」。
+  - 审核拒绝：将游记状态置为「未通过」，并填写拒绝原因。
+  - 修改状态：可以对已通过改为未通过，防止误操作通过后改回。对未通过的游记修改拒绝原因，或者改为通过
+  - 删除游记：逻辑删除游记，管理员专属权限。
+  - 恢复游记：将删除标记清除，管理员专属权限。
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### 2. 筛选与搜索
+
+- **状态筛选**：支持通过游记状态（待审核、已通过、未通过）进行筛选。
+- **标题搜索**：支持通过游记标题关键字进行搜索，并提供清除搜索的功能。
+
+### 3. 用户登录与角色权限
+
+- **用户登录**：支持管理系统用户登录，确保操作安全性。
+- **角色权限**：
+  - 审核人员：可以操作游记的审核通过和拒绝。
+  - 管理员：可以执行所有支持的操作（通过、拒绝、删除）。
+
+### 4. 其他
+
+- **动态 UI**：
+  - 实时显示搜索状态和结果数量。
+  - 提供直观的操作按钮和反馈。
+- **错误处理**：
+  - API 请求的错误处理，确保系统稳定性。
+- **自动刷新token**：为了保证安全，token有效时间比较短，配置请求自动通过refresh_token刷新token
+- **分页获取列表**：限制每次请求返回的数据量，减少网络传输的压力，提高响应速度。  提升性能：对于大数据集，分页可以避免一次性加载所有数据，降低服务器和客户端的内存占用，避免因加载过多数据导致页面卡顿或加载时间过长。
+
+## 技术栈
+
+- **前端框架**：React + TypeScript
+- **状态管理**：React Context
+- **UI 组件**：shadcn + Tailwind CSS
+- **构建工具**：Vite
+- **网络请求**：Axios
+
+## 安装与运行
+
+### 环境要求
+
+- Node.js >= 16.x
+- npm >= 7.x
+
+### 安装依赖
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 启动开发环境
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+npm run dev
 ```
+
+### 构建生产环境
+
+```bash
+npm run build
+```
+
+### 运行生产环境
+
+```bash
+npm run preview
+```
+
+
+
+
