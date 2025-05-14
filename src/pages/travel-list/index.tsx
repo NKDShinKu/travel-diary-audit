@@ -38,6 +38,8 @@ import { toast } from "sonner";
 import { api } from '@/api';
 import { useAuth } from '@/utils/AuthContext';
 import { getTravelNoteStatus, setTravelNoteStatus, markAsDeleted } from '@/utils/quick-tag.ts';
+import ImageGrid from './components/images-gird.tsx';
+
 
 const TravelNoteList: React.FC = () => {
     const [travelNotes, setTravelNotes] = useState<TravelNote[]>([]);
@@ -419,7 +421,7 @@ const TravelNoteList: React.FC = () => {
                 <DialogContent
                     className={
                         'transition-all ' +
-                        (dialogMode === 'view' ? 'max-w-5xl h-4/5 overflow-hidden' : '') +
+                        (dialogMode === 'view' ? 'max-w-4xl h-5/6 overflow-hidden' : '') +
                         (dialogMode === 'deleted' ? 'max-w-md' : '') +
                         (dialogMode === 'reject' ? 'max-w-md' : '') +
                         (dialogMode === 'edit-rejected' ? 'max-w-md' : '') +
@@ -437,24 +439,26 @@ const TravelNoteList: React.FC = () => {
                     </DialogHeader>
 
                     {dialogMode === 'view' && travelNoteDetails && (
-                        <ScrollArea className="space-y-4 w-full h-150 p-3">
+                        <ScrollArea className="space-y-4 w-full h-150 p-3 border rounded-lg">
+                            {getTravelNoteStatus(travelNoteDetails.quick_tag) === TravelNoteStatus.REJECTED && (
+                                <h3 className="font-semibold text-red-500">已拒绝：{travelNoteDetails.rejectReason}
+                                </h3>
+                            )}
+                            {getTravelNoteStatus(travelNoteDetails.quick_tag) === TravelNoteStatus.APPROVED && (
+                                <h3 className="font-semibold text-green-500">已通过
+                                </h3>
+                            )}
                             <div className="flex justify-between items-center">
                                 <h2 className="text-gray-600 font-bold">标题：{travelNoteDetails.title}</h2>
                                 <p className="text-gray-600">作者：{travelNoteDetails.author.username}</p>
                                 <p className="text-gray-600">发布时间：{new Date(travelNoteDetails.date).toLocaleString('zh-CN', {hour12: false}).replace(/\//g, '-')}</p>
                             </div>
 
-                            <p
-                                className="mt-4"
+                            <p className="mt-4"
                                 dangerouslySetInnerHTML={{
-                                    __html: travelNoteDetails.content.replace(/\n/g, '<br />')
-                                }}
+                                    __html: travelNoteDetails.content.replace(/\n/g, '<br />') }}
                             ></p>
-                            <div className="mt-4 space-y-2">
-                                {travelNoteDetails.images.map((image, index) => (
-                                    <img key={index} src={image} alt={`Image ${index + 1}`} className="w-full rounded-lg" />
-                                ))}
-                            </div>
+
                             {travelNoteDetails.video && (
                                 <div className="mt-4">
                                     <video controls className="w-full rounded-lg">
@@ -463,12 +467,11 @@ const TravelNoteList: React.FC = () => {
                                     </video>
                                 </div>
                             )}
-                            {getTravelNoteStatus(travelNoteDetails.quick_tag) === TravelNoteStatus.REJECTED && (
-                                <div>
-                                    <h3 className="font-semibold">拒绝原因</h3>
-                                    <p className="text-red-500">{travelNoteDetails.rejectReason}</p>
-                                </div>
-                            )}
+                            <div className="flex justify-center mt-6">
+                                <ImageGrid images={travelNoteDetails.images} />
+                            </div>
+
+
                         </ScrollArea>
                     )}
 
